@@ -1,38 +1,54 @@
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Scanner;
 
 public class Server {
-	public static void main(String[] args) {
-		ServerSocket server = null;
-		int port = 8080;
-		try {
-			server = new ServerSocket(port);
-			
-			//an infinite loop so that server is always listening
-			while(true) {
-				//listen for incxcoming request
-				Socket client = server.accept();
-			}
-		}
-		catch(Exception e) {
-			
-		}
-	}
-	
-	//an inner class to handle multiple client request simultaneously
-	//implements Runnable to for multi-threading
-	private static class ClientHandler implements Runnable{
-		
-		private Socket client = null;
-		
-		public ClientHandler(Socket newClient) {
-			client = newClient;
-		}
-		@Override
-		public void run() {
-			
-			
-		}
-		
-	}
+    public static void main(String[] args) {
+        try (ServerSocket server = new ServerSocket(8080)) {
+            while (true) {
+                Socket client = server.accept();
+                new Thread(new ClientHandler(client)).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static class ClientHandler implements Runnable {
+        private Socket client;
+
+        public ClientHandler(Socket client) {
+            this.client = client;
+        }
+
+        @Override
+        public void run() {
+            try (ObjectOutputStream sender = new ObjectOutputStream(client.getOutputStream());
+                 ObjectInputStream receiver = new ObjectInputStream(client.getInputStream());
+                 Scanner scanner = new Scanner(System.in);
+                		 ) {
+            	String message = "";
+            	while(true) {
+            		 Message receivedMessage = (Message) receiver.readObject();
+            		 if(receivedMessage.getContent().toLowerCase().equals("bye")) {
+            			 System.out.print("user left the chat room");
+            		 }
+            		 else {
+            			 System.out.println("Received from " + client.getInetAddress() + ": " + receivedMessage.getContent());
+                         
+                         System.out.print("You: ");
+                         message = scanner.nextLine();
+                         sender.writeObject(new Message(message));
+            		 }
+                     
+            	}
+            	
+               
+                
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
